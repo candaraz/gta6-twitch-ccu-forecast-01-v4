@@ -49,7 +49,6 @@ non-decreasing, and the file is far below the 65,536-byte limit.
 import json
 import math
 import os
-import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -143,28 +142,6 @@ def parse_ts(ts):
     return datetime.strptime(ts, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
 
 
-def _nth_sunday(year, month, n):
-    d = datetime(year, month, 1, tzinfo=timezone.utc)
-    delta = (6 - d.weekday()) % 7
-    return d + timedelta(days=delta, weeks=n - 1)
-
-
-def is_us_dst(dt):
-    """True if US Eastern Daylight Time is in effect at UTC instant dt (the
-    2007+ rule: second Sunday of March 07:00Z to first Sunday of November
-    06:00Z)."""
-    start = _nth_sunday(dt.year, 3, 2).replace(hour=7)
-    end = _nth_sunday(dt.year, 11, 1).replace(hour=6)
-    return start <= dt < end
-
-
-def jump_hour(day_start):
-    """Hour in which the US-East local-midnight unlock falls: 5 under EDT
-    (UTC-4), 6 under EST (UTC-5)."""
-    probe = day_start + timedelta(hours=4, minutes=30)
-    return 5 if is_us_dst(probe) else 6
-
-
 # ---------------------------------------------------------------------------
 # feature extraction
 
@@ -188,19 +165,12 @@ def extract_curve(points, day_start):
     return day, pre
 
 
-def features_from_pre(pre, p1, day_start):
+def features_from_pre(pre, p1):
     """Checkpoint-observable features from the 336 pre-day hours. Only the
     last 24h are used, so cases with short histories (the final, whose
     recorder started two days before release day) work unchanged."""
     pre24 = [v for v in pre[-24:] if v]
     prepeak = max(pre24) if pre24 else p1
-
-    def ratio_at(k):
-        for off in (0, -1, 1, -2, 2):
-            idx = len(pre) + k + off
-            if 0 <= idx < len(pre) and pre[idx]:
-                return math.log(pre[idx] / p1)
-        return math.log(prepeak / p1)
 
     last6 = [(i, v) for i, v in enumerate(pre[-6:]) if v]
     if len(last6) >= 2:
@@ -214,17 +184,11 @@ def features_from_pre(pre, p1, day_start):
             1, last24[-1][0] - last24[0][0])
     else:
         ramp24 = 0.0
-    premean = sum(pre24) / len(pre24) if pre24 else p1
     return {
         "lnh1": math.log(p1),
         "prepeak": math.log(prepeak / p1),
-        "h-1": ratio_at(-1),
-        "h-5": ratio_at(-5),
-        "h-13": ratio_at(-13),
         "slope6": slope6,
         "ramp24": ramp24,
-        "premean": math.log(premean / p1),
-        "edt": 1.0 if jump_hour(day_start) == 5 else 0.0,
     }
 
 
@@ -232,7 +196,7 @@ def target_features(day_start, history_hourly, history, known_viewers):
     pts = history_hourly if history_hourly else history
     _, pre = extract_curve(pts or [], day_start)
     p1 = max(1.0, float(known_viewers))
-    return features_from_pre(pre, p1, day_start)
+    return features_from_pre(pre, p1)
 
 
 # ---------------------------------------------------------------------------
@@ -306,7 +270,7 @@ def build_donor(comp):
         return None
     p1 = float(day[0])
     ratios = [math.log(float(day[h]) / p1) for h in range(1, 24)]
-    feats = features_from_pre(pre, p1, ds)
+    feats = features_from_pre(pre, p1)
     amp = sum(ratios[15:21]) / 6.0
     return {
         "name": comp.get("name", "?"),
