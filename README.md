@@ -1,6 +1,6 @@
 [![gta6-twitch-ccu-forecast-01](https://make.fun/badge/gta6-twitch-ccu-forecast-01.svg)](https://make.fun/c/gta6-twitch-ccu-forecast-01)
 [![rank](https://make.fun/badge/gta6-twitch-ccu-forecast-01/candaraz/gta6-twitch-ccu-forecast-01-v4/rank.svg)](https://make.fun/c/gta6-twitch-ccu-forecast-01)
-[![reward](https://make.fun/badge/gta6-twitch-ccu-forecast-01/reward.svg)](https://make.fun/c/gta6-twitch-ccu-forecast-01)
+[![reward](https://make.fun/badge/gta6-twitch-ccu-forecast-01/candaraz/gta6-twitch-ccu-forecast-01-v4/reward.svg)](https://make.fun/c/gta6-twitch-ccu-forecast-01)
 
 # GTA VI launch-day Twitch forecast — v4
 
